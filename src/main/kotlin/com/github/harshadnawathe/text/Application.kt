@@ -16,13 +16,13 @@ class Exchange(
 ) {
     private val replyTopic: String? = input.headers.get(KafkaHeaders.REPLY_TOPIC, String::class.java)
 
-    fun response(): Message<Output> {
-        val mb = MessageBuilder.withPayload(output)
-        replyTopic?.also { destination ->
-            mb.setHeader("spring.cloud.stream.sendto.destination", destination)
+    fun response(): Message<Output> =
+        with(MessageBuilder.withPayload(output)) {
+            if (replyTopic != null) {
+                setHeader("spring.cloud.stream.sendto.destination", replyTopic)
+            }
+            build()
         }
-        return mb.build()
-    }
 }
 
 @SpringBootApplication
