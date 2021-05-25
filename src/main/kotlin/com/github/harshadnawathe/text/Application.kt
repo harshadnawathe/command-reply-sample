@@ -31,7 +31,7 @@ class Application {
     @Bean
     fun reverse(service: ReverseService) =
         Function<Flux<Message<Input>>, Flux<Message<Output>>> { inputStream ->
-            inputStream.flatMap { m ->
+            inputStream.concatMap { m ->
                 service.reverse(m.payload).map { reversed ->
                     Exchange(reversed, m)
                 }
