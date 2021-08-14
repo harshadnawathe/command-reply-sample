@@ -3,8 +3,6 @@ package com.github.harshadnawathe.x.stream.integration
 import com.github.harshadnawathe.x.stream.kafka.util.KafkaTestListener
 import com.github.harshadnawathe.x.stream.kafka.util.expect
 import com.github.harshadnawathe.x.stream.kafka.util.testKafkaTemplateForStringValue
-import com.github.harshadnawathe.x.stream.text.reverse.Input
-import com.github.harshadnawathe.x.stream.text.reverse.Output
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,24 +36,27 @@ class ReverseServiceStreamTest {
     @Test
     fun `should consume Input and produce reversed Output`() {
         kafka.send(
-            MessageBuilder.withPayload(Input(text = "Hello"))
+            MessageBuilder.withPayload(InputMessage(text = "Hello"))
                 .setHeader(KafkaHeaders.TOPIC, "svc-in-text-reverse")
                 .setHeader(KafkaHeaders.REPLY_TOPIC, "client-reply-1")
                 .build()
         )
         kafka.send(
-            MessageBuilder.withPayload(Input(text = "Hi"))
+            MessageBuilder.withPayload(InputMessage(text = "Hi"))
                 .setHeader(KafkaHeaders.TOPIC, "svc-in-text-reverse")
                 .setHeader(KafkaHeaders.REPLY_TOPIC, "client-reply-2")
                 .build()
         )
 
-        listener.expect(onTopic = "client-reply-1") { event: Output ->
-            assertThat(event.text).isEqualTo("olleH")
+        listener.expect<OutputMessage>(onTopic = "client-reply-1") {
+            assertThat(it.text).isEqualTo("olleH")
         }
 
-        listener.expect(onTopic = "client-reply-2") { event: Output ->
-            assertThat(event.text).isEqualTo("iH")
+        listener.expect<OutputMessage>(onTopic = "client-reply-2") {
+            assertThat(it.text).isEqualTo("iH")
         }
     }
 }
+
+data class InputMessage(val text: String)
+data class OutputMessage(val text: String)

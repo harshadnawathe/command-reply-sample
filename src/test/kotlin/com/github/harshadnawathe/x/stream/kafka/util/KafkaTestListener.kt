@@ -9,16 +9,13 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Component
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
 
 @Component
 class KafkaTestListener(
-    private val mapper: ObjectMapper
+    private val mapper: ObjectMapper,
+    private val table: TopicToQueueTable
 ) {
-    private val topicToQueue = ConcurrentHashMap<String, LinkedBlockingQueue<ConsumerRecord<String, String>>>()
-
     @KafkaListener(
         id = "kafkaTestListener",
         topics = ["#{'\${test.listener.topics:''}'.split('\\s*,\\s*')}"],
@@ -30,20 +27,13 @@ class KafkaTestListener(
     )
     private fun enqueue(record: ConsumerRecord<String, String>) {
         LOG.info("Received ${record.value()} on topic ${record.topic()}")
-        queueFor(record.topic()).add(record)
+        table.queueFor(record.topic()).add(record)
     }
 
-    fun next(topic: String, timeout: Long, unit: TimeUnit): ConsumerRecord<String, String>? =
-        queueFor(topic).poll(timeout, unit)
+    fun next(topic: String, timeout: Timeout): ConsumerRecord<String, String>? =
+        table.queueFor(topic).poll(timeout.time, timeout.unit)
 
-    fun <T> ConsumerRecord<String, String>.mapTo(type: Class<T>): T {
-        return mapper.readValue(value(), type)
-    }
-
-    private fun queueFor(topic: String) = topicToQueue.computeIfAbsent(topic) {
-        LOG.info("Added queue for $topic")
-        LinkedBlockingQueue()
-    }
+    fun <T> ConsumerRecord<String, String>.mapTo(type: Class<T>): T = mapper.readValue(value(), type)
 
     companion object {
         @JvmStatic
@@ -53,11 +43,10 @@ class KafkaTestListener(
 
 inline fun <reified T> KafkaTestListener.expect(
     onTopic: String,
-    timeout: Long = 10,
-    unit: TimeUnit = TimeUnit.SECONDS,
+    timeout: Timeout = within(10, SECONDS),
     check: (T) -> Unit = {}
 ): T {
-    return next(onTopic, timeout, unit)
+    return next(onTopic, timeout)
         ?.mapTo(T::class.java)
         ?.also(check)
         ?: fail {
