@@ -1,17 +1,19 @@
 package com.github.harshadnawathe.x.stream.kafka.util
 
-import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG
+import org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.serializer.JsonSerializer
-import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.utils.KafkaTestUtils
 
-fun testKafkaTemplateForStringValue(broker: EmbeddedKafkaBroker): KafkaTemplate<String, String> {
-    val producerProps = KafkaTestUtils.producerProps(broker).also {
-        it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-        it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = JsonSerializer::class.java
+fun testKafkaTemplate(): KafkaTemplate<String, String> {
+    val brokers = System.getProperty("spring.embedded.kafka.brokers")
+
+    val producerProps = KafkaTestUtils.producerProps(brokers).apply {
+        set(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
+        set(VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer::class.java)
     }
 
     return KafkaTemplate(

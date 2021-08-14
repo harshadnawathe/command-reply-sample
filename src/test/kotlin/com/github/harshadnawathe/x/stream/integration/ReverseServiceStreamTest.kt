@@ -2,13 +2,12 @@ package com.github.harshadnawathe.x.stream.integration
 
 import com.github.harshadnawathe.x.stream.kafka.util.KafkaTestListener
 import com.github.harshadnawathe.x.stream.kafka.util.expect
-import com.github.harshadnawathe.x.stream.kafka.util.testKafkaTemplateForStringValue
+import com.github.harshadnawathe.x.stream.kafka.util.testKafkaTemplate
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.support.KafkaHeaders
-import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.test.context.TestPropertySource
@@ -24,14 +23,11 @@ import org.springframework.test.context.TestPropertySource
 class ReverseServiceStreamTest {
 
     @Autowired
-    lateinit var embeddedKafkaBroker: EmbeddedKafkaBroker
-
-    @Autowired
     lateinit var listener: KafkaTestListener
 
-    private val kafka
-        get() = testKafkaTemplateForStringValue(embeddedKafkaBroker)
-
+    private val kafka by lazy {
+        testKafkaTemplate()
+    }
 
     @Test
     fun `should consume Input and produce reversed Output`() {
@@ -48,11 +44,11 @@ class ReverseServiceStreamTest {
                 .build()
         )
 
-        listener.expect<OutputMessage>(onTopic = "client-reply-1") {
+        listener.expect<OutputMessage>(onTopic = "client-reply-1").also {
             assertThat(it.text).isEqualTo("olleH")
         }
 
-        listener.expect<OutputMessage>(onTopic = "client-reply-2") {
+        listener.expect<OutputMessage>(onTopic = "client-reply-2").also {
             assertThat(it.text).isEqualTo("iH")
         }
     }

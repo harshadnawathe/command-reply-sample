@@ -43,12 +43,10 @@ class KafkaTestListener(
 
 inline fun <reified T> KafkaTestListener.expect(
     onTopic: String,
-    timeout: Timeout = within(10, SECONDS),
-    check: (T) -> Unit = {}
+    timeout: Timeout = within(10, SECONDS)
 ): T {
     return next(onTopic, timeout)
         ?.mapTo(T::class.java)
-        ?.also(check)
         ?: fail {
             "Did not receive event ${T::class.java.name} on $onTopic"
         }
