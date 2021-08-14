@@ -1,9 +1,11 @@
-package com.github.harshadnawathe.text
+package com.github.harshadnawathe.x.stream.integration
 
-import com.github.harshadnawathe.text.util.KafkaTestListener
-import com.github.harshadnawathe.text.util.testKafkaTemplateForStringValue
+import com.github.harshadnawathe.x.stream.kafka.util.KafkaTestListener
+import com.github.harshadnawathe.x.stream.kafka.util.expect
+import com.github.harshadnawathe.x.stream.kafka.util.testKafkaTemplateForStringValue
+import com.github.harshadnawathe.x.stream.text.reverse.Input
+import com.github.harshadnawathe.x.stream.text.reverse.Output
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -12,7 +14,6 @@ import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.messaging.support.MessageBuilder
 import org.springframework.test.context.TestPropertySource
-import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @EmbeddedKafka(partitions = 1)
@@ -22,7 +23,7 @@ import java.util.concurrent.TimeUnit
         "test.listener.topics=client-reply-1,client-reply-2"
     ]
 )
-class ApplicationTests {
+class ReverseServiceStreamTest {
 
     @Autowired
     lateinit var embeddedKafkaBroker: EmbeddedKafkaBroker
@@ -33,14 +34,9 @@ class ApplicationTests {
     private val kafka
         get() = testKafkaTemplateForStringValue(embeddedKafkaBroker)
 
-    @BeforeEach
-    internal fun setUp() {
-        listener.reset(2)
-    }
+
     @Test
     fun `should consume Input and produce reversed Output`() {
-        val latch = listener.latch()
-
         kafka.send(
             MessageBuilder.withPayload(Input(text = "Hello"))
                 .setHeader(KafkaHeaders.TOPIC, "svc-in-text-reverse")
@@ -53,18 +49,13 @@ class ApplicationTests {
                 .setHeader(KafkaHeaders.REPLY_TOPIC, "client-reply-2")
                 .build()
         )
-        latch.await(30, TimeUnit.SECONDS)
 
-        assertThat(latch.count).isEqualTo(0)
-        assertThat(
-            listener.messages()
-        ).anyMatch {
-            it.payload == "{\"text\":\"olleH\"}" && it.headers[KafkaHeaders.RECEIVED_TOPIC] == "client-reply-1"
-        }.anyMatch {
-            it.payload == "{\"text\":\"iH\"}" && it.headers[KafkaHeaders.RECEIVED_TOPIC] == "client-reply-2"
+        listener.expect(onTopic = "client-reply-1") { event: Output ->
+            assertThat(event.text).isEqualTo("olleH")
         }
 
-
+        listener.expect(onTopic = "client-reply-2") { event: Output ->
+            assertThat(event.text).isEqualTo("iH")
+        }
     }
-
 }

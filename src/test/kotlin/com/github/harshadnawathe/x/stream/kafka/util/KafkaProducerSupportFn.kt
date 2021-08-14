@@ -1,4 +1,4 @@
-package com.github.harshadnawathe.text.util
+package com.github.harshadnawathe.x.stream.kafka.util
 
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringSerializer
